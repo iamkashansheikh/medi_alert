@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:medi_alert/feature/view/alaram_ring_screen.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
 
@@ -65,12 +66,16 @@ class MedicineController extends GetxController {
 
     await flutterLocalNotificationsPlugin.initialize(
       initSettings,
-      onDidReceiveNotificationResponse: (response) {
-        print("Notification tapped: ${response.payload}");
-        if (response.payload != null) {
-          Get.toNamed('/alarm', arguments: response.payload);
-        }
-      },
+     onDidReceiveNotificationResponse: (response) {
+  if (response.payload != null) {
+    final data = jsonDecode(response.payload!);
+    Get.to(() => AlarmRingScreen(
+      medicineName: data['name'],
+      time: data['time'],
+      snoozeMinutes: data['snoozeMinutes'],
+    ));
+  }
+},
     );
     
     print('✅ Notifications initialized');
@@ -139,7 +144,7 @@ class MedicineController extends GetxController {
     clearForm();
     
     Get.back();
-    _scheduleNotification(newMed);
+    scheduleNotification(newMed);
     
     Get.snackbar(
       'Success',
@@ -148,7 +153,7 @@ class MedicineController extends GetxController {
     );
   }
 
-  void _scheduleNotification(Medicine med) async {
+  void scheduleNotification(Medicine med) async {
     try {
       print('🚀 Scheduling: ${med.name} at ${med.time}');
       
@@ -196,13 +201,13 @@ class MedicineController extends GetxController {
         channelDescription: channel.description,
         importance: Importance.max,
         priority: Priority.high,
+        fullScreenIntent: true, // must
+  category: AndroidNotificationCategory.alarm,
         playSound: true,
         sound: RawResourceAndroidNotificationSound('alaram_bell'),
         enableVibration: true,
         vibrationPattern: Int64List.fromList([0, 500, 250, 500]),
-        category: AndroidNotificationCategory.alarm,
         actions: actions,
-        fullScreenIntent: true,
       );
 
       final platformDetails = NotificationDetails(android: androidDetails);
@@ -334,6 +339,8 @@ tz.TZDateTime _nextWeeklyDay(tz.TZDateTime current, List<int> selectedDays) {
         channelDescription: channel.description,
         importance: Importance.max,
         priority: Priority.high,
+        fullScreenIntent: true,
+        category: AndroidNotificationCategory.alarm,
         sound: RawResourceAndroidNotificationSound('alaram_bell'),
         playSound: true,
         enableVibration: true,
